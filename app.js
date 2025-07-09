@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let animationFrameId;
     let videoStream;
     let currentAcceleration = { x: 0, y: 0, z: 0 };
-    let currentGyroscope = { alpha: 0, beta: 0, gamma: 0 };
+    let currentRotationRate = { alpha: 0, beta: 0, gamma: 0 };
 
     // --- イベントリスナー ---
     startButton.addEventListener('click', handleStart);
@@ -139,11 +139,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function calculateStabilityScore() {
         // 重力(約9.8m/s^2)の影響を簡易的に除去
         const net_a = Math.abs(Math.sqrt(currentAcceleration.x**2 + currentAcceleration.y**2 + currentAcceleration.z**2) - 9.8);
-        // ジャイロはそのまま利用
-        const g = Math.sqrt(currentGyroscope.alpha**2 + currentGyroscope.beta**2 + currentGyroscope.gamma**2);
+        // 角速度の大きさ(ベクトルの長さ)を計算 (単位: deg/s)
+        const r = Math.sqrt(currentRotationRate.alpha**2 + currentRotationRate.beta**2 + currentRotationRate.gamma**2);
         
-        // 値が小さいほど良いので、逆数を取ってスコア化。係数で重み付け
-        return 1 / (1 + (0.5 * net_a) + (1.0 * g));
+        // 動き(加速度と角速度)が小さいほどスコアが1に近づくように計算。係数で重み付けを調整。
+        return 1 / (1 + (0.5 * net_a) + (0.1 * r));
     }
 
     function saveBestShot() {
@@ -161,49 +161,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function requestSensorPermission() {
         permissionOutput.innerHTML = '';
-        const motionPromise = (typeof DeviceMotionEvent.requestPermission === 'function')
-            ? DeviceMotionEvent.requestPermission()
-            : Promise.resolve('granted');
-
-        const orientationPromise = (typeof DeviceOrientationEvent.requestPermission === 'function')
-            ? DeviceOrientationEvent.requestPermission()
-            : Promise.resolve('granted');
-        
-        const [motion, orientation] = await Promise.all([motionPromise, orientationPromise]);
-
-        if (motion === 'granted') {
+        // iOS 13+ では許可リクエストが必要
+        if (typeof DeviceMotionEvent.requestPermission === 'function') {
+            const permission = await DeviceMotionEvent.requestPermission();
+            if (permission === 'granted') {
+                window.addEventListener('devicemotion', handleMotionEvent);
+                permissionOutput.innerHTML += 'DeviceMotionEvent: granted<br>';
+            } else {
+                permissionOutput.innerHTML += 'DeviceMotionEvent: denied<br>';
+                throw new Error('モーションセンサーの許可が必要です。');
+            }
+        } else {
+            // iOS 12.2以前やAndroidなど、許可が不要な環境
             window.addEventListener('devicemotion', handleMotionEvent);
-            permissionOutput.innerHTML += 'DeviceMotionEvent: granted<br>';
-        } else {
-            permissionOutput.innerHTML += 'DeviceMotionEvent: denied<br>';
-            throw new Error('加速度センサーの許可が必要です。');
-        }
-        if (orientation === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientationEvent);
-            permissionOutput.innerHTML += 'DeviceOrientationEvent: granted<br>';
-        } else {
-            permissionOutput.innerHTML += 'DeviceOrientationEvent: denied<br>';
-            throw new Error('ジャイロセンサーの許可が必要です。');
+            permissionOutput.innerHTML += 'DeviceMotionEvent: permission not required<br>';
         }
     }
 
     function handleMotionEvent(event) {
         const acc = event.acceleration;
+        const rot = event.rotationRate;
         if (acc) {
             currentAcceleration.x = acc.x || 0;
             currentAcceleration.y = acc.y || 0;
             currentAcceleration.z = acc.z || 0;
-            // リアルタイムで値を表示
             accelData.textContent = `${(acc.x || 0).toFixed(2)}, ${(acc.y || 0).toFixed(2)}, ${(acc.z || 0).toFixed(2)}`;
         }
-    }
-
-    function handleOrientationEvent(event) {
-        currentGyroscope.alpha = event.alpha || 0;
-        currentGyroscope.beta = event.beta || 0;
-        currentGyroscope.gamma = event.gamma || 0;
-        // リアルタイムで値を表示
-        gyroData.textContent = `${(event.alpha || 0).toFixed(2)}, ${(event.beta || 0).toFixed(2)}, ${(event.gamma || 0).toFixed(2)}`;
+        if (rot) {
+            currentRotationRate.alpha = rot.alpha || 0;
+            currentRotationRate.beta = rot.beta || 0;
+            currentRotationRate.gamma = rot.gamma || 0;
+            gyroData.textContent = `${(rot.alpha || 0).toFixed(2)}, ${(rot.beta || 0).toFixed(2)}, ${(rot.gamma || 0).toFixed(2)}`;
+        }
     }
 
     async function setupCamera() {
