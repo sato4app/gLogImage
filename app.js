@@ -13,6 +13,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const accelData = document.getElementById('accel-data');
     const gyroData = document.getElementById('gyro-data');
     const stabilityScoreDisplay = document.getElementById('stability-score');
+    const scoreMinMaxDisplay = document.getElementById('score-min-max');
+    const thresholdSlider = document.getElementById('threshold-slider');
+    const thresholdValue = document.getElementById('threshold-value');
     const modal = document.getElementById('modal');
     const modalImage = document.getElementById('modalImage');
     const closeButton = document.querySelector('.close-button');
@@ -20,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 設定値 ---
     const TARGET_IMAGE_COUNT = 500;
     const COOLDOWN_PERIOD_MS = 5000;
-    const STABILITY_THRESHOLD = 0.95; // 安定度スコアのしきい値 (0-1)。1に近いほど厳しい。
+    let STABILITY_THRESHOLD = 0.95; // 安定度スコアのしきい値 (0-1)。1に近いほど厳しい。
 
     // --- 状態変数 ---
     let savedImages = [];
@@ -28,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let isCapturing = false;
     let animationFrameId;
     let videoStream;
+    let scoreMin = 1.0;
+    let scoreMax = 0.0;
     let currentAcceleration = { x: 0, y: 0, z: 0 };
     let currentRotationRate = { alpha: 0, beta: 0, gamma: 0 };
 
@@ -40,6 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target === modal) {
             modal.style.display = "none";
         }
+    });
+    thresholdSlider.addEventListener('input', (e) => {
+        STABILITY_THRESHOLD = parseFloat(e.target.value);
+        thresholdValue.textContent = STABILITY_THRESHOLD.toFixed(2);
     });
 
     // =================================================================
@@ -77,6 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isCapturing = true;
         savedImages = [];
         lastSaveTime = 0;
+        scoreMin = 1.0;
+        scoreMax = 0.0;
+        if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
         
         stopButton.disabled = false;
         startButton.disabled = true;
@@ -103,6 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         accelData.textContent = '---';
         gyroData.textContent = '---';
         stabilityScoreDisplay.textContent = '---';
+        if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
         
         if (savedImages.length > 0) {
             displayGallery();
@@ -117,9 +130,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isCapturing) return;
 
         const stabilityScore = calculateStabilityScore();
-        // 安定度スコアをリアルタイムで表示
-        stabilityScoreDisplay.textContent = `${stabilityScore.toFixed(4)} (閾値: ${STABILITY_THRESHOLD})`;
+        scoreMin = Math.min(scoreMin, stabilityScore);
+        scoreMax = Math.max(scoreMax, stabilityScore);
 
+        // 安定度スコアをリアルタイムで表示
+        stabilityScoreDisplay.textContent = `${formatNumber(stabilityScore, 4, 6)} (閾値: ${STABILITY_THRESHOLD.toFixed(2)})`;
+        if (scoreMinMaxDisplay) {
+            scoreMinMaxDisplay.textContent = `${formatNumber(scoreMin, 4, 6)} / ${formatNumber(scoreMax, 4, 6)}`;
+        }
+        
         const now = Date.now();
         if (now - lastSaveTime > COOLDOWN_PERIOD_MS) {
             if (stabilityScore > STABILITY_THRESHOLD) {
@@ -155,6 +174,15 @@ document.addEventListener('DOMContentLoaded', () => {
         savedImages.push(canvas.toDataURL('image/jpeg'));
     }
 
+    /**
+     * 数値を整形して、指定した幅で右揃えの文字列を返す
+     * @param {number} num - 対象の数値
+     * @param {number} precision - 小数点以下の桁数
+     * @param {number} totalWidth - 全体の文字幅（パディング含む）
+     */
+    function formatNumber(num, precision, totalWidth) {
+        return (num || 0).toFixed(precision).padStart(totalWidth, ' ');
+    }
     // =================================================================
     //  セットアップとパーミッション関連
     // =================================================================
@@ -185,13 +213,13 @@ document.addEventListener('DOMContentLoaded', () => {
             currentAcceleration.x = acc.x || 0;
             currentAcceleration.y = acc.y || 0;
             currentAcceleration.z = acc.z || 0;
-            accelData.textContent = `${(acc.x || 0).toFixed(2)}, ${(acc.y || 0).toFixed(2)}, ${(acc.z || 0).toFixed(2)}`;
+            accelData.textContent = `${formatNumber(acc.x, 2, 6)}, ${formatNumber(acc.y, 2, 6)}, ${formatNumber(acc.z, 2, 6)}`;
         }
         if (rot) {
             currentRotationRate.alpha = rot.alpha || 0;
             currentRotationRate.beta = rot.beta || 0;
             currentRotationRate.gamma = rot.gamma || 0;
-            gyroData.textContent = `${(rot.alpha || 0).toFixed(2)}, ${(rot.beta || 0).toFixed(2)}, ${(rot.gamma || 0).toFixed(2)}`;
+            gyroData.textContent = `${formatNumber(rot.alpha, 2, 7)}, ${formatNumber(rot.beta, 2, 7)}, ${formatNumber(rot.gamma, 2, 7)}`;
         }
     }
 
