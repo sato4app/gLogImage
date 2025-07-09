@@ -10,10 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryContainer = document.getElementById('gallery-container');
     const gallery = document.getElementById('gallery');
     const downloadZipButton = document.getElementById('downloadZipButton');
-    // 古い要素の取得を削除
-    // const accelData = document.getElementById('accel-data');
-    // const gyroData = document.getElementById('gyro-data');
-    // 新しい表形式のセル要素を取得
     const accelX = document.getElementById('accel-x');
     const accelY = document.getElementById('accel-y');
     const accelZ = document.getElementById('accel-z');
@@ -31,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- 設定値 ---
     const TARGET_IMAGE_COUNT = 500;
     const COOLDOWN_PERIOD_MS = 5000;
-    let STABILITY_THRESHOLD = 0.95; // 安定度スコアのしきい値 (0-1)。1に近いほど厳しい。
+    let STABILITY_THRESHOLD = 0.95; 
 
     // --- 状態変数 ---
     let savedImages = [];
@@ -41,8 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let videoStream;
     let scoreMin = 1.0;
     let scoreMax = 0.0;
-    let currentAcceleration = { x: 0, y: 0, z: 0 };
+    
+    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
+    // センサー値を格納する変数を変更
+    let currentRawAccel = { x: 0, y: 0, z: 0 };
+    let lastRawAccel = { x: 0, y: 0, z: 0 };
     let currentRotationRate = { alpha: 0, beta: 0, gamma: 0 };
+    let isFirstMotionEvent = true; // 最初のイベントを処理するためのフラグ
+    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
 
     // --- イベントリスナー ---
     startButton.addEventListener('click', handleStart);
@@ -68,21 +70,15 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDisplay.textContent = '準備中...';
 
         try {
-            // 1. センサーとカメラの許可と設定
             await requestSensorPermission();
             await setupCamera();
-
-            // 2. センサーが利用可能かチェック
             statusDisplay.textContent = 'センサーをチェックしています...';
-            const sensorReady = await checkSensorAvailability(3000); // 3秒待つ
+            const sensorReady = await checkSensorAvailability(3000);
 
             if (!sensorReady) {
                 throw new Error('センサーデータを取得できませんでした。');
             }
-
-            // 3. 撮影開始
             startCapture();
-
         } catch (error) {
             statusDisplay.textContent = `エラー: ${error.message}`;
             alert(`開始できませんでした: ${error.message}\nデバイスが対応しているか、カメラとモーションセンサーの許可を確認してください。`);
@@ -96,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
         lastSaveTime = 0;
         scoreMin = 1.0;
         scoreMax = 0.0;
+        isFirstMotionEvent = true; // 開始時にリセット
         if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
         
         stopButton.disabled = false;
@@ -116,7 +113,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         stopButton.disabled = true;
         startButton.disabled = false;
-
         statusDisplay.textContent = `撮影を終了しました。合計 ${savedImages.length} 枚の画像を保存しました。`;
         
         if (savedImages.length > 0) {
@@ -131,10 +127,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function captureLoop() {
         if (!isCapturing) return;
 
-        // センサー値をリアルタイムで表示
-        if (accelX) accelX.textContent = formatNumber(currentAcceleration.x, 2, 6);
-        if (accelY) accelY.textContent = formatNumber(currentAcceleration.y, 2, 6);
-        if (accelZ) accelZ.textContent = formatNumber(currentAcceleration.z, 2, 6);
+        // 表示する加速度は重力込みの生データでOK
+        if (accelX) accelX.textContent = formatNumber(currentRawAccel.x, 2, 6);
+        if (accelY) accelY.textContent = formatNumber(currentRawAccel.y, 2, 6);
+        if (accelZ) accelZ.textContent = formatNumber(currentRawAccel.z, 2, 6);
         if (gyroAlpha) gyroAlpha.textContent = formatNumber(currentRotationRate.alpha, 2, 7);
         if (gyroBeta) gyroBeta.textContent = formatNumber(currentRotationRate.beta, 2, 7);
         if (gyroGamma) gyroGamma.textContent = formatNumber(currentRotationRate.gamma, 2, 7);
@@ -143,7 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreMin = Math.min(scoreMin, stabilityScore);
         scoreMax = Math.max(scoreMax, stabilityScore);
 
-        // 安定度スコアをリアルタイムで表示
         stabilityScoreDisplay.textContent = formatNumber(stabilityScore, 2, 4);
         if (scoreMinMaxDisplay) {
             scoreMinMaxDisplay.textContent = `${formatNumber(scoreMin, 2, 4)} / ${formatNumber(scoreMax, 2, 4)}`;
@@ -155,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveBestShot();
                 lastSaveTime = now;
                 statusDisplay.textContent = `画像を保存しました！ (${savedImages.length} / ${TARGET_IMAGE_COUNT})`;
-
                 if (savedImages.length >= TARGET_IMAGE_COUNT) {
                     stopCapture();
                     return;
@@ -167,20 +161,29 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
     function calculateStabilityScore() {
-        // `currentAcceleration`は event.acceleration から取得しており、
-        // すでに重力加速度が除外された「純粋な動き」の値。
-        // そのため、ベクトルの大きさ（純粋な動きの大きさ）をそのまま計算します。
-        const net_a = Math.sqrt(currentAcceleration.x**2 + currentAcceleration.y**2 + currentAcceleration.z**2);
+        // 加速度の「変化量」を計算する
+        const deltaX = currentRawAccel.x - lastRawAccel.x;
+        const deltaY = currentRawAccel.y - lastRawAccel.y;
+        const deltaZ = currentRawAccel.z - lastRawAccel.z;
+
+        // 加速度の変化量の大きさ（ベクトルの長さ）を計算
+        // これが純粋な「動き」による加速度となる
+        const net_a_change = Math.sqrt(deltaX**2 + deltaY**2 + deltaZ**2);
         
         // 角速度の大きさ(ベクトルの長さ)を計算
         const r = Math.sqrt(currentRotationRate.alpha**2 + currentRotationRate.beta**2 + currentRotationRate.gamma**2);
         
-        // 加速度と角速度から「揺れ」の大きさをペナルティとして算出。
-        // 係数は、手ぶれ程度の揺れでスコアが下がりすぎないように調整。
-        const movementPenalty = (0.2 * net_a) + (0.02 * r);
+        // 加速度の変化量と角速度から「揺れ」の大きさをペナルティとして算出
+        // 係数は、値のスケールが変化したため再調整
+        const movementPenalty = (2.0 * net_a_change) + (0.02 * r);
         
-        // ペナルティが大きいほどスコアが0に近づくように指数関数で変換。
-        // 完全に静止していればペナルティは0に近づき、スコアはe^0 = 1に近づく。
+        // 次のフレームのために現在の値を保存する
+        lastRawAccel.x = currentRawAccel.x;
+        lastRawAccel.y = currentRawAccel.y;
+        lastRawAccel.z = currentRawAccel.z;
+
+        // ペナルティが大きいほどスコアが0に近づくように指数関数で変換
+        // 完全に静止していれば変化量は0に近づき、スコアはe^0 = 1に近づく
         return Math.exp(-movementPenalty);
     }
     // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
@@ -194,29 +197,21 @@ document.addEventListener('DOMContentLoaded', () => {
         savedImages.push(canvas.toDataURL('image/jpeg'));
     }
 
-    /**
-     * 数値を符号付きで整形し、指定した幅で右揃えの文字列を返す。
-     * 正の数には符号の代わりに半角スペースが先頭に付与され、
-     * 負の数と表示上の桁が揃うように調整される。
-     * @param {number} num - 対象の数値
-     * @param {number} precision - 小数点以下の桁数
-     * @param {number} totalWidth - 全体の文字幅（パディング含む）
-     */
     function formatNumber(num, precision, totalWidth) {
         const value = num || 0;
         let str = value.toFixed(precision);
         if (value >= 0) {
-            str = ' ' + str; // 正の数にはスペースを付与
+            str = ' ' + str; 
         }
-        return str.padStart(totalWidth, ' '); // 全体の幅に達するまで左をスペースで埋める
+        return str.padStart(totalWidth, ' ');
     }
+    
     // =================================================================
     //  セットアップとパーミッション関連
     // =================================================================
 
     async function requestSensorPermission() {
         permissionOutput.innerHTML = '';
-        // iOS 13+ では許可リクエストが必要
         if (typeof DeviceMotionEvent.requestPermission === 'function') {
             const permission = await DeviceMotionEvent.requestPermission();
             if (permission === 'granted') {
@@ -227,20 +222,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error('モーションセンサーの許可が必要です。');
             }
         } else {
-            // iOS 12.2以前やAndroidなど、許可が不要な環境
             window.addEventListener('devicemotion', handleMotionEvent);
             permissionOutput.innerHTML += 'DeviceMotionEvent: permission not required<br>';
         }
     }
 
+    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
     function handleMotionEvent(event) {
-        // 重力加速度を含まない加速度を取得
-        const acc = event.acceleration;
+        // どのデバイスでも一貫した値が得やすい accelerationIncludingGravity を使用
+        const acc = event.accelerationIncludingGravity;
         const rot = event.rotationRate;
+
         if (acc) {
-            currentAcceleration.x = acc.x || 0;
-            currentAcceleration.y = acc.y || 0;
-            currentAcceleration.z = acc.z || 0;
+            currentRawAccel.x = acc.x || 0;
+            currentRawAccel.y = acc.y || 0;
+            currentRawAccel.z = acc.z || 0;
+            
+            // 最初のイベントでは、lastとcurrentを同じ値に設定して変化量を0にする
+            if (isFirstMotionEvent) {
+                lastRawAccel.x = currentRawAccel.x;
+                lastRawAccel.y = currentRawAccel.y;
+                lastRawAccel.z = currentRawAccel.z;
+                isFirstMotionEvent = false;
+            }
         }
         if (rot) {
             currentRotationRate.alpha = rot.alpha || 0;
@@ -248,6 +252,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentRotationRate.gamma = rot.gamma || 0;
         }
     }
+    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
 
     async function setupCamera() {
         if (videoStream) {
@@ -257,7 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
             video: {
                 width: { ideal: 640 },
                 height: { ideal: 480 },
-                facingMode: 'environment' // 背面カメラを優先
+                facingMode: 'environment'
             }
         };
         videoStream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -303,16 +308,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function downloadImagesAsZip() {
         if (savedImages.length === 0) return;
-
         statusDisplay.textContent = '画像をZIPに圧縮しています...';
         const zip = new JSZip();
-
         savedImages.forEach((base64Data, index) => {
             const imageData = base64Data.split(',')[1];
             const fileName = `image_${String(index + 1).padStart(3, '0')}.jpg`;
             zip.file(fileName, imageData, { base64: true });
         });
-
         zip.generateAsync({ type: "blob" })
             .then(content => {
                 const link = document.createElement('a');
