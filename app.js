@@ -94,9 +94,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isCapturing = true;
         savedImages = [];
         lastSaveTime = 0;
-        scoreMin = 0.99;
+        scoreMin = 1.0;
         scoreMax = 0.0;
-        stabilityScoreDisplay.textContent = '---';
         if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
         
         stopButton.disabled = false;
@@ -168,17 +167,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
     function calculateStabilityScore() {
-        // 重力(約9.8m/s^2)の影響を簡易的に除去した、純粋な動きによる加速度の大きさを計算
-        const net_a = Math.abs(Math.sqrt(currentAcceleration.x**2 + currentAcceleration.y**2 + currentAcceleration.z**2) - 9.8);
+        // `currentAcceleration`は event.acceleration から取得しており、
+        // すでに重力加速度が除外された「純粋な動き」の値。
+        // そのため、ベクトルの大きさ（純粋な動きの大きさ）をそのまま計算します。
+        const net_a = Math.sqrt(currentAcceleration.x**2 + currentAcceleration.y**2 + currentAcceleration.z**2);
+        
         // 角速度の大きさ(ベクトルの長さ)を計算
         const r = Math.sqrt(currentRotationRate.alpha**2 + currentRotationRate.beta**2 + currentRotationRate.gamma**2);
         
-        // 加速度と角速度から「揺れ」の大きさをペナルティとして算出します。
-        // 係数は、手ぶれ程度の揺れでスコアが下がりすぎないように調整しています。
+        // 加速度と角速度から「揺れ」の大きさをペナルティとして算出。
+        // 係数は、手ぶれ程度の揺れでスコアが下がりすぎないように調整。
         const movementPenalty = (0.2 * net_a) + (0.02 * r);
         
-        // ペナルティが大きいほどスコアが0に近づくように指数関数で変換します。
-        // 完全に静止していればペナルティは0に近づき、スコアはe^0 = 1に近づきます。
+        // ペナルティが大きいほどスコアが0に近づくように指数関数で変換。
+        // 完全に静止していればペナルティは0に近づき、スコアはe^0 = 1に近づく。
         return Math.exp(-movementPenalty);
     }
     // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
@@ -232,6 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleMotionEvent(event) {
+        // 重力加速度を含まない加速度を取得
         const acc = event.acceleration;
         const rot = event.rotationRate;
         if (acc) {
