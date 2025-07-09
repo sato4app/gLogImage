@@ -133,6 +133,14 @@ document.addEventListener('DOMContentLoaded', () => {
     function captureLoop() {
         if (!isCapturing) return;
 
+        // センサー値をリアルタイムで表示
+        if (accelX) accelX.textContent = formatNumber(currentAcceleration.x, 2, 6);
+        if (accelY) accelY.textContent = formatNumber(currentAcceleration.y, 2, 6);
+        if (accelZ) accelZ.textContent = formatNumber(currentAcceleration.z, 2, 6);
+        if (gyroAlpha) gyroAlpha.textContent = formatNumber(currentRotationRate.alpha, 2, 7);
+        if (gyroBeta) gyroBeta.textContent = formatNumber(currentRotationRate.beta, 2, 7);
+        if (gyroGamma) gyroGamma.textContent = formatNumber(currentRotationRate.gamma, 2, 7);
+
         const stabilityScore = calculateStabilityScore();
         scoreMin = Math.min(scoreMin, stabilityScore);
         scoreMax = Math.max(scoreMax, stabilityScore);
@@ -217,7 +225,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
     function handleMotionEvent(event) {
         const acc = event.acceleration;
         const rot = event.rotationRate;
@@ -225,22 +232,13 @@ document.addEventListener('DOMContentLoaded', () => {
             currentAcceleration.x = acc.x || 0;
             currentAcceleration.y = acc.y || 0;
             currentAcceleration.z = acc.z || 0;
-            // 各セルに整形した数値を設定
-            if (accelX) accelX.textContent = formatNumber(acc.x, 2, 6);
-            if (accelY) accelY.textContent = formatNumber(acc.y, 2, 6);
-            if (accelZ) accelZ.textContent = formatNumber(acc.z, 2, 6);
         }
         if (rot) {
             currentRotationRate.alpha = rot.alpha || 0;
             currentRotationRate.beta = rot.beta || 0;
             currentRotationRate.gamma = rot.gamma || 0;
-            // 各セルに整形した数値を設定
-            if (gyroAlpha) gyroAlpha.textContent = formatNumber(rot.alpha, 2, 7);
-            if (gyroBeta) gyroBeta.textContent = formatNumber(rot.beta, 2, 7);
-            if (gyroGamma) gyroGamma.textContent = formatNumber(rot.gamma, 2, 7);
         }
     }
-    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
 
     async function setupCamera() {
         if (videoStream) {
