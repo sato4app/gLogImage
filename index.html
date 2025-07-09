@@ -19,11 +19,11 @@
             <button id="startButton">開始</button>
             <button id="stopButton" disabled>終了</button>
         </div>
-        <div id="sensor-display" style="position: absolute; bottom: 70px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 8px; border-radius: 5px; font-family: monospace; font-size: 12px; line-height: 1.4;">
-            <div>加速度 (x, y, z): <span id="accel-data">---</span></div>
-            <div>角速度 (α, β, γ): <span id="gyro-data">---</span></div>
-            <div>安定度スコア: <span id="stability-score">---</span></div>
-            <div>スコア (min/max): <span id="score-min-max">--- / ---</span></div>
+        <div id="sensor-display" style="position: absolute; bottom: 70px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 8px; border-radius: 5px; font-family: monospace; font-size: 12px; line-height: 1.4; width: 320px;">
+            <div>加速度 (x, y, z): <span id="accel-data" style="display: inline-block; width: 26ch; text-align: right;">---</span></div>
+            <div>角速度 (α, β, γ): <span id="gyro-data" style="display: inline-block; width: 26ch; text-align: right;">---</span></div>
+            <div>安定度スコア: <span id="stability-score" style="display: inline-block; width: 7ch; text-align: right;">---</span></div>
+            <div>スコア (min/max): <span id="score-min-max" style="display: inline-block; width: 17ch; text-align: right;">--- / ---</span></div>
             <div style="display: flex; align-items: center; gap: 10px;">
                 <span>閾値設定: <span id="threshold-value">0.95</span></span>
                 <input type="range" id="threshold-slider" min="0.80" max="1.00" step="0.01" value="0.95" style="width: 100px;">
