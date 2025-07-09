@@ -10,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryContainer = document.getElementById('gallery-container');
     const gallery = document.getElementById('gallery');
     const downloadZipButton = document.getElementById('downloadZipButton');
+    const accelData = document.getElementById('accel-data');
+    const gyroData = document.getElementById('gyro-data');
+    const stabilityScoreDisplay = document.getElementById('stability-score');
     const modal = document.getElementById('modal');
     const modalImage = document.getElementById('modalImage');
     const closeButton = document.querySelector('.close-button');
@@ -96,6 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         statusDisplay.textContent = `撮影を終了しました。合計 ${savedImages.length} 枚の画像を保存しました。`;
         
+        // センサー表示をリセット
+        accelData.textContent = '---';
+        gyroData.textContent = '---';
+        stabilityScoreDisplay.textContent = '---';
+        
         if (savedImages.length > 0) {
             displayGallery();
         }
@@ -108,10 +116,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function captureLoop() {
         if (!isCapturing) return;
 
+        const stabilityScore = calculateStabilityScore();
+        // 安定度スコアをリアルタイムで表示
+        stabilityScoreDisplay.textContent = `${stabilityScore.toFixed(4)} (閾値: ${STABILITY_THRESHOLD})`;
+
         const now = Date.now();
         if (now - lastSaveTime > COOLDOWN_PERIOD_MS) {
-            const stabilityScore = calculateStabilityScore();
-
             if (stabilityScore > STABILITY_THRESHOLD) {
                 saveBestShot();
                 lastSaveTime = now;
@@ -183,6 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentAcceleration.x = acc.x || 0;
             currentAcceleration.y = acc.y || 0;
             currentAcceleration.z = acc.z || 0;
+            // リアルタイムで値を表示
+            accelData.textContent = `${(acc.x || 0).toFixed(2)}, ${(acc.y || 0).toFixed(2)}, ${(acc.z || 0).toFixed(2)}`;
         }
     }
 
@@ -190,6 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentGyroscope.alpha = event.alpha || 0;
         currentGyroscope.beta = event.beta || 0;
         currentGyroscope.gamma = event.gamma || 0;
+        // リアルタイムで値を表示
+        gyroData.textContent = `${(event.alpha || 0).toFixed(2)}, ${(event.beta || 0).toFixed(2)}, ${(event.gamma || 0).toFixed(2)}`;
     }
 
     async function setupCamera() {

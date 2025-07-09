@@ -19,6 +19,11 @@
             <button id="startButton">開始</button>
             <button id="stopButton" disabled>終了</button>
         </div>
+        <div id="sensor-display" style="position: absolute; bottom: 70px; left: 10px; background: rgba(0,0,0,0.6); color: white; padding: 8px; border-radius: 5px; font-family: monospace; font-size: 12px; line-height: 1.4;">
+            <div>加速度 (x, y, z): <span id="accel-data">---</span></div>
+            <div>ジャイロ (α, β, γ): <span id="gyro-data">---</span></div>
+            <div>安定度スコア: <span id="stability-score">---</span></div>
+        </div>
         <div id="status">ボタンを押して撮影を開始してください</div>
         <div id="permissionOutput"></div>
     </div>
