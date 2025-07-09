@@ -1,0 +1,270 @@
+document.addEventListener('DOMContentLoaded', () => {
+
+    // --- DOM要素の取得 ---
+    const video = document.getElementById('cameraFeed');
+    const startButton = document.getElementById('startButton');
+    const stopButton = document.getElementById('stopButton');
+    const statusDisplay = document.getElementById('status');
+    const permissionOutput = document.getElementById('permissionOutput');
+    const captureContainer = document.getElementById('capture-container');
+    const galleryContainer = document.getElementById('gallery-container');
+    const gallery = document.getElementById('gallery');
+    const downloadZipButton = document.getElementById('downloadZipButton');
+    const modal = document.getElementById('modal');
+    const modalImage = document.getElementById('modalImage');
+    const closeButton = document.querySelector('.close-button');
+
+    // --- 設定値 ---
+    const TARGET_IMAGE_COUNT = 500;
+    const COOLDOWN_PERIOD_MS = 5000;
+    const STABILITY_THRESHOLD = 0.95; // 安定度スコアのしきい値 (0-1)。1に近いほど厳しい。
+
+    // --- 状態変数 ---
+    let savedImages = [];
+    let lastSaveTime = 0;
+    let isCapturing = false;
+    let animationFrameId;
+    let videoStream;
+    let currentAcceleration = { x: 0, y: 0, z: 0 };
+    let currentGyroscope = { alpha: 0, beta: 0, gamma: 0 };
+
+    // --- イベントリスナー ---
+    startButton.addEventListener('click', handleStart);
+    stopButton.addEventListener('click', stopCapture);
+    downloadZipButton.addEventListener('click', downloadImagesAsZip);
+    closeButton.addEventListener('click', () => modal.style.display = "none");
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.style.display = "none";
+        }
+    });
+
+    // =================================================================
+    //  メインの処理フロー
+    // =================================================================
+
+    async function handleStart() {
+        startButton.disabled = true;
+        statusDisplay.textContent = '準備中...';
+
+        try {
+            // 1. センサーとカメラの許可と設定
+            await requestSensorPermission();
+            await setupCamera();
+
+            // 2. センサーが利用可能かチェック
+            statusDisplay.textContent = 'センサーをチェックしています...';
+            const sensorReady = await checkSensorAvailability(3000); // 3秒待つ
+
+            if (!sensorReady) {
+                throw new Error('センサーデータを取得できませんでした。');
+            }
+
+            // 3. 撮影開始
+            startCapture();
+
+        } catch (error) {
+            statusDisplay.textContent = `エラー: ${error.message}`;
+            alert(`開始できませんでした: ${error.message}\nデバイスが対応しているか、カメラとモーションセンサーの許可を確認してください。`);
+            startButton.disabled = false;
+        }
+    }
+
+    function startCapture() {
+        isCapturing = true;
+        savedImages = [];
+        lastSaveTime = 0;
+        
+        stopButton.disabled = false;
+        startButton.disabled = true;
+        
+        statusDisplay.textContent = `撮影を開始しました (0 / ${TARGET_IMAGE_COUNT})`;
+        captureLoop();
+    }
+
+    function stopCapture() {
+        if (!isCapturing) return;
+        isCapturing = false;
+
+        cancelAnimationFrame(animationFrameId);
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+        }
+
+        stopButton.disabled = true;
+        startButton.disabled = false;
+
+        statusDisplay.textContent = `撮影を終了しました。合計 ${savedImages.length} 枚の画像を保存しました。`;
+        
+        if (savedImages.length > 0) {
+            displayGallery();
+        }
+    }
+
+    // =================================================================
+    //  コア機能の関数
+    // =================================================================
+
+    function captureLoop() {
+        if (!isCapturing) return;
+
+        const now = Date.now();
+        if (now - lastSaveTime > COOLDOWN_PERIOD_MS) {
+            const stabilityScore = calculateStabilityScore();
+
+            if (stabilityScore > STABILITY_THRESHOLD) {
+                saveBestShot();
+                lastSaveTime = now;
+                statusDisplay.textContent = `画像を保存しました！ (${savedImages.length} / ${TARGET_IMAGE_COUNT})`;
+
+                if (savedImages.length >= TARGET_IMAGE_COUNT) {
+                    stopCapture();
+                    return;
+                }
+            }
+        }
+        animationFrameId = requestAnimationFrame(captureLoop);
+    }
+    
+    function calculateStabilityScore() {
+        // 重力(約9.8m/s^2)の影響を簡易的に除去
+        const net_a = Math.abs(Math.sqrt(currentAcceleration.x**2 + currentAcceleration.y**2 + currentAcceleration.z**2) - 9.8);
+        // ジャイロはそのまま利用
+        const g = Math.sqrt(currentGyroscope.alpha**2 + currentGyroscope.beta**2 + currentGyroscope.gamma**2);
+        
+        // 値が小さいほど良いので、逆数を取ってスコア化。係数で重み付け
+        return 1 / (1 + (0.5 * net_a) + (1.0 * g));
+    }
+
+    function saveBestShot() {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        savedImages.push(canvas.toDataURL('image/jpeg'));
+    }
+
+    // =================================================================
+    //  セットアップとパーミッション関連
+    // =================================================================
+
+    async function requestSensorPermission() {
+        permissionOutput.innerHTML = '';
+        const motionPromise = (typeof DeviceMotionEvent.requestPermission === 'function')
+            ? DeviceMotionEvent.requestPermission()
+            : Promise.resolve('granted');
+
+        const orientationPromise = (typeof DeviceOrientationEvent.requestPermission === 'function')
+            ? DeviceOrientationEvent.requestPermission()
+            : Promise.resolve('granted');
+        
+        const [motion, orientation] = await Promise.all([motionPromise, orientationPromise]);
+
+        if (motion === 'granted') {
+            window.addEventListener('devicemotion', handleMotionEvent);
+            permissionOutput.innerHTML += 'DeviceMotionEvent: granted<br>';
+        } else {
+            permissionOutput.innerHTML += 'DeviceMotionEvent: denied<br>';
+            throw new Error('加速度センサーの許可が必要です。');
+        }
+        if (orientation === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientationEvent);
+            permissionOutput.innerHTML += 'DeviceOrientationEvent: granted<br>';
+        } else {
+            permissionOutput.innerHTML += 'DeviceOrientationEvent: denied<br>';
+            throw new Error('ジャイロセンサーの許可が必要です。');
+        }
+    }
+
+    function handleMotionEvent(event) {
+        const acc = event.acceleration;
+        if (acc) {
+            currentAcceleration.x = acc.x || 0;
+            currentAcceleration.y = acc.y || 0;
+            currentAcceleration.z = acc.z || 0;
+        }
+    }
+
+    function handleOrientationEvent(event) {
+        currentGyroscope.alpha = event.alpha || 0;
+        currentGyroscope.beta = event.beta || 0;
+        currentGyroscope.gamma = event.gamma || 0;
+    }
+
+    async function setupCamera() {
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+        }
+        const constraints = {
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+                facingMode: 'environment' // 背面カメラを優先
+            }
+        };
+        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = videoStream;
+        return new Promise((resolve) => {
+            video.onloadedmetadata = () => resolve();
+        });
+    }
+
+    function checkSensorAvailability(timeout) {
+        return new Promise((resolve) => {
+            let sensorDataReceived = false;
+            const checkMotionListener = () => { sensorDataReceived = true; };
+            
+            window.addEventListener('devicemotion', checkMotionListener, { once: true });
+
+            setTimeout(() => {
+                window.removeEventListener('devicemotion', checkMotionListener);
+                resolve(sensorDataReceived);
+            }, timeout);
+        });
+    }
+
+    // =================================================================
+    //  ギャラリーとダウンロード関連
+    // =================================================================
+
+    function displayGallery() {
+        captureContainer.style.display = 'none';
+        galleryContainer.style.display = 'block';
+        gallery.innerHTML = '';
+
+        savedImages.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.addEventListener('click', () => {
+                modalImage.src = src;
+                modal.style.display = "block";
+            });
+            gallery.appendChild(img);
+        });
+    }
+
+    function downloadImagesAsZip() {
+        if (savedImages.length === 0) return;
+
+        statusDisplay.textContent = '画像をZIPに圧縮しています...';
+        const zip = new JSZip();
+
+        savedImages.forEach((base64Data, index) => {
+            const imageData = base64Data.split(',')[1];
+            const fileName = `image_${String(index + 1).padStart(3, '0')}.jpg`;
+            zip.file(fileName, imageData, { base64: true });
+        });
+
+        zip.generateAsync({ type: "blob" })
+            .then(content => {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = "best_shots.zip";
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                statusDisplay.textContent = 'ZIPファイルのダウンロードを開始しました。';
+            });
+    }
+});
