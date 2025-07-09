@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto Capture Best Shot</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="manifest" href="manifest.json">
+    <!-- JSZipライブラリをCDNから読み込み -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+    <h1>Auto Capture Best Shot</h1>
+
+    <!-- 撮影中の画面 -->
+    <div id="capture-container">
+        <video id="cameraFeed" autoplay playsinline muted></video>
+        <div class="controls">
+            <button id="startButton">監視開始</button>
+            <button id="stopButton" disabled>監視停止</button>
+        </div>
+        <div id="status">ボタンを押して開始してください</div>
+        <div id="permissionOutput"></div>
+    </div>
+
+    <!-- 撮影後のギャラリー画面 -->
+    <div id="gallery-container" style="display:none;">
+        <div class="controls">
+            <button id="downloadZipButton">全画像をZIPでダウンロード</button>
+        </div>
+        <div id="gallery"></div>
+    </div>
+
+    <!-- 画像拡大表示用モーダル -->
+    <div id="modal" class="modal">
+        <span class="close-button">×</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
