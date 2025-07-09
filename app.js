@@ -121,19 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         statusDisplay.textContent = `撮影を終了しました。合計 ${savedImages.length} 枚の画像を保存しました。`;
         
-        // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
-        // センサー表示をリセット
-        if (accelX) accelX.textContent = '---';
-        if (accelY) accelY.textContent = '---';
-        if (accelZ) accelZ.textContent = '---';
-        if (gyroAlpha) gyroAlpha.textContent = '---';
-        if (gyroBeta) gyroBeta.textContent = '---';
-        if (gyroGamma) gyroGamma.textContent = '---';
-        // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
-
-        stabilityScoreDisplay.textContent = '---';
-        if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
-        
         if (savedImages.length > 0) {
             displayGallery();
         }
