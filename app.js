@@ -94,8 +94,9 @@ document.addEventListener('DOMContentLoaded', () => {
         isCapturing = true;
         savedImages = [];
         lastSaveTime = 0;
-        scoreMin = 1.0;
+        scoreMin = 0.99;
         scoreMax = 0.0;
+        stabilityScoreDisplay.textContent = '---';
         if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
         
         stopButton.disabled = false;
