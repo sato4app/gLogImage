@@ -10,8 +10,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryContainer = document.getElementById('gallery-container');
     const gallery = document.getElementById('gallery');
     const downloadZipButton = document.getElementById('downloadZipButton');
-    const accelData = document.getElementById('accel-data');
-    const gyroData = document.getElementById('gyro-data');
+    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
+    // 古い要素の取得を削除
+    // const accelData = document.getElementById('accel-data');
+    // const gyroData = document.getElementById('gyro-data');
+    // 新しい表形式のセル要素を取得
+    const accelX = document.getElementById('accel-x');
+    const accelY = document.getElementById('accel-y');
+    const accelZ = document.getElementById('accel-z');
+    const gyroAlpha = document.getElementById('gyro-alpha');
+    const gyroBeta = document.getElementById('gyro-beta');
+    const gyroGamma = document.getElementById('gyro-gamma');
+    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
     const stabilityScoreDisplay = document.getElementById('stability-score');
     const scoreMinMaxDisplay = document.getElementById('score-min-max');
     const thresholdSlider = document.getElementById('threshold-slider');
@@ -111,9 +121,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         statusDisplay.textContent = `撮影を終了しました。合計 ${savedImages.length} 枚の画像を保存しました。`;
         
+        // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
         // センサー表示をリセット
-        accelData.textContent = '---';
-        gyroData.textContent = '---';
+        if (accelX) accelX.textContent = '---';
+        if (accelY) accelY.textContent = '---';
+        if (accelZ) accelZ.textContent = '---';
+        if (gyroAlpha) gyroAlpha.textContent = '---';
+        if (gyroBeta) gyroBeta.textContent = '---';
+        if (gyroGamma) gyroGamma.textContent = '---';
+        // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
+
         stabilityScoreDisplay.textContent = '---';
         if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
         
@@ -206,6 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
     function handleMotionEvent(event) {
         const acc = event.acceleration;
         const rot = event.rotationRate;
@@ -213,15 +231,22 @@ document.addEventListener('DOMContentLoaded', () => {
             currentAcceleration.x = acc.x || 0;
             currentAcceleration.y = acc.y || 0;
             currentAcceleration.z = acc.z || 0;
-            accelData.textContent = `${formatNumber(acc.x, 2, 6)}, ${formatNumber(acc.y, 2, 6)}, ${formatNumber(acc.z, 2, 6)}`;
+            // 各セルに整形した数値を設定
+            if (accelX) accelX.textContent = formatNumber(acc.x, 2, 6);
+            if (accelY) accelY.textContent = formatNumber(acc.y, 2, 6);
+            if (accelZ) accelZ.textContent = formatNumber(acc.z, 2, 6);
         }
         if (rot) {
             currentRotationRate.alpha = rot.alpha || 0;
             currentRotationRate.beta = rot.beta || 0;
             currentRotationRate.gamma = rot.gamma || 0;
-            gyroData.textContent = `${formatNumber(rot.alpha, 2, 7)}, ${formatNumber(rot.beta, 2, 7)}, ${formatNumber(rot.gamma, 2, 7)}`;
+            // 各セルに整形した数値を設定
+            if (gyroAlpha) gyroAlpha.textContent = formatNumber(rot.alpha, 2, 7);
+            if (gyroBeta) gyroBeta.textContent = formatNumber(rot.beta, 2, 7);
+            if (gyroGamma) gyroGamma.textContent = formatNumber(rot.gamma, 2, 7);
         }
     }
+    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
 
     async function setupCamera() {
         if (videoStream) {
