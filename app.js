@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryContainer = document.getElementById('gallery-container');
     const gallery = document.getElementById('gallery');
     const downloadZipButton = document.getElementById('downloadZipButton');
-    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
     // 古い要素の取得を削除
     // const accelData = document.getElementById('accel-data');
     // const gyroData = document.getElementById('gyro-data');
@@ -21,7 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const gyroAlpha = document.getElementById('gyro-alpha');
     const gyroBeta = document.getElementById('gyro-beta');
     const gyroGamma = document.getElementById('gyro-gamma');
-    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
     const stabilityScoreDisplay = document.getElementById('stability-score');
     const scoreMinMaxDisplay = document.getElementById('score-min-max');
     const thresholdSlider = document.getElementById('threshold-slider');
@@ -167,15 +165,22 @@ document.addEventListener('DOMContentLoaded', () => {
         animationFrameId = requestAnimationFrame(captureLoop);
     }
     
+    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
     function calculateStabilityScore() {
-        // 重力(約9.8m/s^2)の影響を簡易的に除去
+        // 重力(約9.8m/s^2)の影響を簡易的に除去した、純粋な動きによる加速度の大きさを計算
         const net_a = Math.abs(Math.sqrt(currentAcceleration.x**2 + currentAcceleration.y**2 + currentAcceleration.z**2) - 9.8);
-        // 角速度の大きさ(ベクトルの長さ)を計算 (単位: deg/s)
+        // 角速度の大きさ(ベクトルの長さ)を計算
         const r = Math.sqrt(currentRotationRate.alpha**2 + currentRotationRate.beta**2 + currentRotationRate.gamma**2);
         
-        // 動き(加速度と角速度)が小さいほどスコアが1に近づくように計算。係数で重み付けを調整。
-        return 1 / (1 + (0.5 * net_a) + (0.1 * r));
+        // 加速度と角速度から「揺れ」の大きさをペナルティとして算出します。
+        // 係数は、手ぶれ程度の揺れでスコアが下がりすぎないように調整しています。
+        const movementPenalty = (0.2 * net_a) + (0.02 * r);
+        
+        // ペナルティが大きいほどスコアが0に近づくように指数関数で変換します。
+        // 完全に静止していればペナルティは0に近づき、スコアはe^0 = 1に近づきます。
+        return Math.exp(-movementPenalty);
     }
+    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
 
     function saveBestShot() {
         const canvas = document.createElement('canvas');
