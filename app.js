@@ -134,9 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
         scoreMax = Math.max(scoreMax, stabilityScore);
 
         // 安定度スコアをリアルタイムで表示
-        stabilityScoreDisplay.textContent = `${formatNumber(stabilityScore, 4, 6)} (閾値: ${STABILITY_THRESHOLD.toFixed(2)})`;
+        stabilityScoreDisplay.textContent = formatNumber(stabilityScore, 2, 4);
         if (scoreMinMaxDisplay) {
-            scoreMinMaxDisplay.textContent = `${formatNumber(scoreMin, 4, 6)} / ${formatNumber(scoreMax, 4, 6)}`;
+            scoreMinMaxDisplay.textContent = `${formatNumber(scoreMin, 2, 4)} / ${formatNumber(scoreMax, 2, 4)}`;
         }
         
         const now = Date.now();
