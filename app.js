@@ -192,13 +192,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * 数値を整形して、指定した幅で右揃えの文字列を返す
+     * 数値を符号付きで整形し、指定した幅で右揃えの文字列を返す。
+     * 正の数には符号の代わりに半角スペースが先頭に付与され、
+     * 負の数と表示上の桁が揃うように調整される。
      * @param {number} num - 対象の数値
      * @param {number} precision - 小数点以下の桁数
      * @param {number} totalWidth - 全体の文字幅（パディング含む）
      */
     function formatNumber(num, precision, totalWidth) {
-        return (num || 0).toFixed(precision).padStart(totalWidth, ' ');
+        const value = num || 0;
+        let str = value.toFixed(precision);
+        if (value >= 0) {
+            str = ' ' + str; // 正の数にはスペースを付与
+        }
+        return str.padStart(totalWidth, ' '); // 全体の幅に達するまで左をスペースで埋める
     }
     // =================================================================
     //  セットアップとパーミッション関連
