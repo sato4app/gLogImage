@@ -124,6 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
         stopButton.disabled = true;
         startButton.disabled = false;
         statusDisplay.textContent = `撮影を終了しました。合計 ${savedImages.length} 枚の画像を保存しました。`;
+
+        // 撮影が終了したので、経過時間の表示を初期値に戻す
+        if (elapsedTimeDisplay) {
+            elapsedTimeDisplay.textContent = '---';
+        }
         
         if (savedImages.length > 0) {
             displayGallery();
