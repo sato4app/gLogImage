@@ -208,6 +208,15 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // センサーデータから揺れの大きさを算出し、安定度スコア（0.0〜1.0）を返す。
     function calculateStabilityScore() {
+        // 最初のフレームでは、前回値がないため計算をスキップし、スコア1.0を返す
+        if (isFirstMotionEvent) {
+            lastRawAccel.x = currentRawAccel.x;
+            lastRawAccel.y = currentRawAccel.y;
+            lastRawAccel.z = currentRawAccel.z;
+            isFirstMotionEvent = false;
+            return 1.0; // 最初のフレームは常に安定しているとみなす
+        }
+
         // 加速度の「変化量」を計算する
         const deltaX = currentRawAccel.x - lastRawAccel.x;
         const deltaY = currentRawAccel.y - lastRawAccel.y;
@@ -308,14 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
             currentRawAccel.x = acc.x || 0;
             currentRawAccel.y = acc.y || 0;
             currentRawAccel.z = acc.z || 0;
-            
-            // 最初のイベントでは、lastとcurrentを同じ値に設定して変化量を0にする
-            if (isFirstMotionEvent) {
-                lastRawAccel.x = currentRawAccel.x;
-                lastRawAccel.y = currentRawAccel.y;
-                lastRawAccel.z = currentRawAccel.z;
-                isFirstMotionEvent = false;
-            }
         }
         // 角速度データを更新
         if (rot) {
