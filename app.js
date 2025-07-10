@@ -24,6 +24,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalImage = document.getElementById('modalImage');
     const closeButton = document.querySelector('.close-button');
 
+    // センサー値表示欄の要素をまとめる
+    const sensorValueDisplays = [
+        accelX, accelY, accelZ,
+        gyroAlpha, gyroBeta, gyroGamma,
+        stabilityScoreDisplay, scoreMinMaxDisplay
+    ].filter(el => el); // 存在しない要素を除外
+
+
     // --- 設定値 ---
     const TARGET_IMAGE_COUNT = 500;
     const COOLDOWN_PERIOD_MS = 5000;
@@ -95,6 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
         isFirstMotionEvent = true; // 開始時にリセット
         if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
         
+        // 撮影中にセンサー値の背景色を変更
+        sensorValueDisplays.forEach(el => {
+            // 文字が読める程度の薄いグレー
+            el.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
+        });
+
         stopButton.disabled = false;
         startButton.disabled = true;
         
@@ -110,6 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (videoStream) {
             videoStream.getTracks().forEach(track => track.stop());
         }
+
+        // センサー値の背景色を元に戻す
+        sensorValueDisplays.forEach(el => {
+            el.style.backgroundColor = '';
+        });
 
         stopButton.disabled = true;
         startButton.disabled = false;
