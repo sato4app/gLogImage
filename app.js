@@ -167,6 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (now - lastSaveTime > COOLDOWN_PERIOD_MS) {
             if (stabilityScore > STABILITY_THRESHOLD) {
                 saveBestShot();
+                triggerFlash();
                 lastSaveTime = now;
                 statusDisplay.textContent = `画像を保存しました！ (${savedImages.length} / ${TARGET_IMAGE_COUNT})`;
                 if (savedImages.length >= TARGET_IMAGE_COUNT) {
@@ -214,6 +215,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const context = canvas.getContext('2d');
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
         savedImages.push(canvas.toDataURL('image/jpeg'));
+    }
+
+    function triggerFlash() {
+        const flashOverlay = document.createElement('div');
+        // フラッシュ用のオーバーレイ要素のスタイルを設定
+        flashOverlay.style.position = 'fixed';
+        flashOverlay.style.top = '0';
+        flashOverlay.style.left = '0';
+        flashOverlay.style.width = '100vw';
+        flashOverlay.style.height = '100vh';
+        flashOverlay.style.backgroundColor = 'white';
+        flashOverlay.style.opacity = '0.7'; // 開始時の不透明度
+        flashOverlay.style.zIndex = '9999'; // 最前面に表示
+        flashOverlay.style.pointerEvents = 'none'; // マウスイベントを透過させる
+        flashOverlay.style.transition = 'opacity 200ms ease-out'; // 0.2秒でフェードアウト
+
+        document.body.appendChild(flashOverlay);
+
+        // 短い時間表示してからフェードアウトを開始
+        setTimeout(() => {
+            flashOverlay.style.opacity = '0';
+            // transition完了後に要素をDOMから削除
+            setTimeout(() => document.body.removeChild(flashOverlay), 200);
+        }, 50);
     }
 
     function formatNumber(num, precision, totalWidth) {
