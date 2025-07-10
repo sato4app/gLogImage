@@ -33,35 +33,34 @@ document.addEventListener('DOMContentLoaded', () => {
         elapsedTimeDisplay = document.getElementById('elapsed-time-display');
     }
 
-    // --- 設定値 ---
+    // --- アプリケーション設定値 ---
     const TARGET_IMAGE_COUNT = 500;
     const COOLDOWN_PERIOD_MS = 5000;
     let STABILITY_THRESHOLD = 0.95; 
 
-    // --- 状態変数 ---
+    // --- アプリケーションの状態を管理する変数 ---
     let savedImages = [];
     let lastSaveTime = 0;
     let isCapturing = false;
     let animationFrameId;
     let videoStream;
+
+    // --- スコアとセンサー関連の変数 ---
     let scoreMin = 1.0;
     let scoreMax = 0.0;
     let captureStartTime = 0;
-    
-    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
-    // センサー値を格納する変数を変更
     let currentRawAccel = { x: 0, y: 0, z: 0 };
     let lastRawAccel = { x: 0, y: 0, z: 0 };
     let currentRotationRate = { alpha: 0, beta: 0, gamma: 0 };
     let isFirstMotionEvent = true; // 最初のイベントを処理するためのフラグ
-    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
 
-    // --- イベントリスナー ---
+    // --- UI要素のイベントリスナー設定 ---
     startButton.addEventListener('click', handleStart);
     stopButton.addEventListener('click', stopCapture);
     downloadZipButton.addEventListener('click', downloadImagesAsZip);
     closeButton.addEventListener('click', () => modal.style.display = "none");
     modal.addEventListener('click', (e) => {
+        // モーダルの背景クリックで閉じる
         if (e.target === modal) {
             modal.style.display = "none";
         }
@@ -75,6 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //  メインの処理フロー
     // =================================================================
 
+    // 撮影開始のメイン処理。センサー許可、カメラ準備、撮影開始を順次実行する。
     async function handleStart() {
         startButton.disabled = true;
         statusDisplay.textContent = '準備中...';
@@ -96,32 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // 撮影プロセスを開始し、各種リセットを行ってから撮影ループを起動する。
     function startCapture() {
         isCapturing = true;
         savedImages = [];
         lastSaveTime = 0;
         captureStartTime = Date.now(); // 経過時間計測用
-        scoreMin = 1.0;
-        scoreMax = 0.0;
-
-        // センサー関連の変数をリセット
-        currentRawAccel = { x: 0, y: 0, z: 0 };
-        lastRawAccel = { x: 0, y: 0, z: 0 };
-        currentRotationRate = { alpha: 0, beta: 0, gamma: 0 };
-        isFirstMotionEvent = true; // 開始時にリセット
-
-        // 画面表示をリセット
-        if (accelX) accelX.textContent = formatNumber(0, 2, 6);
-        if (accelY) accelY.textContent = formatNumber(0, 2, 6);
-        if (accelZ) accelZ.textContent = formatNumber(0, 2, 6);
-        if (gyroAlpha) gyroAlpha.textContent = formatNumber(0, 2, 7);
-        if (gyroBeta) gyroBeta.textContent = formatNumber(0, 2, 7);
-        if (gyroGamma) gyroGamma.textContent = formatNumber(0, 2, 7);
-        if (stabilityScoreDisplay) stabilityScoreDisplay.textContent = '----'.padStart(4, ' ');
-        if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
-        if (elapsedTimeDisplay) {
-            elapsedTimeDisplay.textContent = '0.0s';
-        }
+        resetDisplayAndValues();
         
         stopButton.disabled = false;
         startButton.disabled = true;
@@ -130,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
         captureLoop();
     }
 
+    // 撮影を停止し、リソースを解放してギャラリーを表示する。
     function stopCapture() {
         if (!isCapturing) return;
         isCapturing = false;
@@ -152,6 +134,33 @@ document.addEventListener('DOMContentLoaded', () => {
     //  コア機能の関数
     // =================================================================
 
+    // 撮影開始時に各種変数と画面表示を初期状態にリセットする。
+    function resetDisplayAndValues() {
+        // 状態変数のリセット
+        scoreMin = 1.0;
+        scoreMax = 0.0;
+
+        // センサー関連の変数をリセット
+        currentRawAccel = { x: 0, y: 0, z: 0 };
+        lastRawAccel = { x: 0, y: 0, z: 0 };
+        currentRotationRate = { alpha: 0, beta: 0, gamma: 0 };
+        isFirstMotionEvent = true; // 開始時にリセット
+
+        // 画面表示をリセット
+        if (accelX) accelX.textContent = formatNumber(0, 2, 6);
+        if (accelY) accelY.textContent = formatNumber(0, 2, 6);
+        if (accelZ) accelZ.textContent = formatNumber(0, 2, 6);
+        if (gyroAlpha) gyroAlpha.textContent = formatNumber(0, 2, 7);
+        if (gyroBeta) gyroBeta.textContent = formatNumber(0, 2, 7);
+        if (gyroGamma) gyroGamma.textContent = formatNumber(0, 2, 7);
+        if (stabilityScoreDisplay) stabilityScoreDisplay.textContent = '----'.padStart(4, ' ');
+        if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
+        if (elapsedTimeDisplay) {
+            elapsedTimeDisplay.textContent = '0.0s';
+        }
+    }
+
+    // 撮影中のメインループ。センサー値を表示し、安定度を評価して自動撮影する。
     function captureLoop() {
         if (!isCapturing) return;
 
@@ -192,22 +201,20 @@ document.addEventListener('DOMContentLoaded', () => {
         animationFrameId = requestAnimationFrame(captureLoop);
     }
     
-    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
+    // センサーデータから揺れの大きさを算出し、安定度スコア（0.0〜1.0）を返す。
     function calculateStabilityScore() {
         // 加速度の「変化量」を計算する
         const deltaX = currentRawAccel.x - lastRawAccel.x;
         const deltaY = currentRawAccel.y - lastRawAccel.y;
         const deltaZ = currentRawAccel.z - lastRawAccel.z;
 
-        // 加速度の変化量の大きさ（ベクトルの長さ）を計算
-        // これが純粋な「動き」による加速度となる
+        // 加速度の変化量の大きさ（ベクトルの長さ）を計算。これが純粋な「動き」による加速度となる
         const net_a_change = Math.sqrt(deltaX**2 + deltaY**2 + deltaZ**2);
         
         // 角速度の大きさ(ベクトルの長さ)を計算
         const r = Math.sqrt(currentRotationRate.alpha**2 + currentRotationRate.beta**2 + currentRotationRate.gamma**2);
         
-        // 加速度の変化量と角速度から「揺れ」の大きさをペナルティとして算出
-        // 係数は、値のスケールが変化したため再調整
+        // 加速度の変化量と角速度から「揺れ」の大きさをペナルティとして算出。係数は実験的に調整
         const movementPenalty = (2.0 * net_a_change) + (0.02 * r);
         
         // 次のフレームのために現在の値を保存する
@@ -215,12 +222,11 @@ document.addEventListener('DOMContentLoaded', () => {
         lastRawAccel.y = currentRawAccel.y;
         lastRawAccel.z = currentRawAccel.z;
 
-        // ペナルティが大きいほどスコアが0に近づくように指数関数で変換
-        // 完全に静止していれば変化量は0に近づき、スコアはe^0 = 1に近づく
+        // ペナルティをスコアに変換して返す（大きいほど0に、小さいほど1に近づく）
         return Math.exp(-movementPenalty);
     }
-    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
 
+    // 現在のビデオフレームをキャプチャし、画像として保存する。
     function saveBestShot() {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
@@ -230,6 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
         savedImages.push(canvas.toDataURL('image/jpeg'));
     }
 
+    // 撮影成功時に画面全体を白く光らせる視覚効果を発動する。
     function triggerFlash() {
         const flashOverlay = document.createElement('div');
         // フラッシュ用のオーバーレイ要素のスタイルを設定
@@ -254,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 50);
     }
 
+    // 数値を指定された桁数と幅で整形し、右寄せ用の文字列を返す。
     function formatNumber(num, precision, totalWidth) {
         const value = num || 0;
         let str = value.toFixed(precision);
@@ -267,6 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //  セットアップとパーミッション関連
     // =================================================================
 
+    // iOSデバイス向けにモーションセンサーへのアクセス許可を要求する。
     async function requestSensorPermission() {
         permissionOutput.innerHTML = '';
         if (typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -284,12 +293,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
+    // devicemotionイベントを捕捉し、センサーの生データをグローバル変数に格納する。
     function handleMotionEvent(event) {
-        // どのデバイスでも一貫した値が得やすい accelerationIncludingGravity を使用
         const acc = event.accelerationIncludingGravity;
         const rot = event.rotationRate;
 
+        // 加速度データを更新
         if (acc) {
             currentRawAccel.x = acc.x || 0;
             currentRawAccel.y = acc.y || 0;
@@ -303,14 +312,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 isFirstMotionEvent = false;
             }
         }
+        // 角速度データを更新
         if (rot) {
             currentRotationRate.alpha = rot.alpha || 0;
             currentRotationRate.beta = rot.beta || 0;
             currentRotationRate.gamma = rot.gamma || 0;
         }
     }
-    // ▲▲▲▲▲ 修正箇所 END ▲▲▲▲▲
 
+    // デバイスのカメラを起動し、ビデオストリームをvideo要素に接続する。
     async function setupCamera() {
         if (videoStream) {
             videoStream.getTracks().forEach(track => track.stop());
@@ -329,6 +339,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // センサーが利用可能で、データが実際に送られてくるかを確認する。
     function checkSensorAvailability(timeout) {
         return new Promise((resolve) => {
             let sensorDataReceived = false;
@@ -347,6 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
     //  ギャラリーとダウンロード関連
     // =================================================================
 
+    // 撮影した画像一覧（ギャラリー）を表示する。
     function displayGallery() {
         captureContainer.style.display = 'none';
         galleryContainer.style.display = 'block';
@@ -363,6 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // ギャラリーの全画像をZIPファイルにまとめてダウンロードする。
     function downloadImagesAsZip() {
         if (savedImages.length === 0) return;
         statusDisplay.textContent = '画像をZIPに圧縮しています...';
