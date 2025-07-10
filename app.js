@@ -24,14 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalImage = document.getElementById('modalImage');
     const closeButton = document.querySelector('.close-button');
 
-    // センサー値表示欄の要素をまとめる
-    const sensorValueDisplays = [
-        accelX, accelY, accelZ,
-        gyroAlpha, gyroBeta, gyroGamma,
-        stabilityScoreDisplay, scoreMinMaxDisplay
-    ].filter(el => el); // 存在しない要素を除外
-
-
     // --- 設定値 ---
     const TARGET_IMAGE_COUNT = 500;
     const COOLDOWN_PERIOD_MS = 5000;
@@ -45,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let videoStream;
     let scoreMin = 1.0;
     let scoreMax = 0.0;
+    let captureStartTime = 0;
     
     // ▼▼▼▼▼ 修正箇所 START ▼▼▼▼▼
     // センサー値を格納する変数を変更
@@ -98,17 +91,26 @@ document.addEventListener('DOMContentLoaded', () => {
         isCapturing = true;
         savedImages = [];
         lastSaveTime = 0;
+        captureStartTime = Date.now(); // 経過時間計測用
         scoreMin = 1.0;
         scoreMax = 0.0;
-        isFirstMotionEvent = true; // 開始時にリセット
-        if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
-        
-        // 撮影中にセンサー値の背景色を変更
-        sensorValueDisplays.forEach(el => {
-            // 文字が読める程度の薄いグレー
-            el.style.backgroundColor = 'rgba(0, 0, 0, 0.05)';
-        });
 
+        // センサー関連の変数をリセット
+        currentRawAccel = { x: 0, y: 0, z: 0 };
+        lastRawAccel = { x: 0, y: 0, z: 0 };
+        currentRotationRate = { alpha: 0, beta: 0, gamma: 0 };
+        isFirstMotionEvent = true; // 開始時にリセット
+
+        // 画面表示をリセット
+        if (accelX) accelX.textContent = formatNumber(0, 2, 6);
+        if (accelY) accelY.textContent = formatNumber(0, 2, 6);
+        if (accelZ) accelZ.textContent = formatNumber(0, 2, 6);
+        if (gyroAlpha) gyroAlpha.textContent = formatNumber(0, 2, 7);
+        if (gyroBeta) gyroBeta.textContent = formatNumber(0, 2, 7);
+        if (gyroGamma) gyroGamma.textContent = formatNumber(0, 2, 7);
+        if (stabilityScoreDisplay) stabilityScoreDisplay.textContent = '----'.padStart(4, ' ');
+        if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / --- (0.0s)';
+        
         stopButton.disabled = false;
         startButton.disabled = true;
         
@@ -124,11 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (videoStream) {
             videoStream.getTracks().forEach(track => track.stop());
         }
-
-        // センサー値の背景色を元に戻す
-        sensorValueDisplays.forEach(el => {
-            el.style.backgroundColor = '';
-        });
 
         stopButton.disabled = true;
         startButton.disabled = false;
@@ -160,7 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         stabilityScoreDisplay.textContent = formatNumber(stabilityScore, 2, 4);
         if (scoreMinMaxDisplay) {
-            scoreMinMaxDisplay.textContent = `${formatNumber(scoreMin, 2, 4)} / ${formatNumber(scoreMax, 2, 4)}`;
+            const elapsedTime = (Date.now() - captureStartTime) / 1000;
+            scoreMinMaxDisplay.textContent = `${formatNumber(scoreMin, 2, 4)} / ${formatNumber(scoreMax, 2, 4)} (${elapsedTime.toFixed(1)}s)`;
         }
         
         const now = Date.now();
