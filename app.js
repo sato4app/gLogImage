@@ -23,6 +23,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('modal');
     const modalImage = document.getElementById('modalImage');
     const closeButton = document.querySelector('.close-button');
+    let elapsedTimeDisplay; // 経過時間表示用の要素を保持する変数
+
+    // 経過時間表示用のDOM要素を動的に作成し、スコア表示の下に挿入
+    if (scoreMinMaxDisplay && scoreMinMaxDisplay.parentElement) {
+        const p = document.createElement('p');
+        p.innerHTML = `経過時間: <span id="elapsed-time-display">---</span>`;
+        scoreMinMaxDisplay.parentElement.insertAdjacentElement('afterend', p);
+        elapsedTimeDisplay = document.getElementById('elapsed-time-display');
+    }
 
     // --- 設定値 ---
     const TARGET_IMAGE_COUNT = 500;
@@ -109,7 +118,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (gyroBeta) gyroBeta.textContent = formatNumber(0, 2, 7);
         if (gyroGamma) gyroGamma.textContent = formatNumber(0, 2, 7);
         if (stabilityScoreDisplay) stabilityScoreDisplay.textContent = '----'.padStart(4, ' ');
-        if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / --- (0.0s)';
+        if (scoreMinMaxDisplay) scoreMinMaxDisplay.textContent = '--- / ---';
+        if (elapsedTimeDisplay) {
+            elapsedTimeDisplay.textContent = '0.0s';
+        }
         
         stopButton.disabled = false;
         startButton.disabled = true;
@@ -157,8 +169,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         stabilityScoreDisplay.textContent = formatNumber(stabilityScore, 2, 4);
         if (scoreMinMaxDisplay) {
+            scoreMinMaxDisplay.textContent = `${formatNumber(scoreMin, 2, 4)} / ${formatNumber(scoreMax, 2, 4)}`;
+        }
+        if (elapsedTimeDisplay) {
             const elapsedTime = (Date.now() - captureStartTime) / 1000;
-            scoreMinMaxDisplay.textContent = `${formatNumber(scoreMin, 2, 4)} / ${formatNumber(scoreMax, 2, 4)} (${elapsedTime.toFixed(1)}s)`;
+            elapsedTimeDisplay.textContent = `${elapsedTime.toFixed(1)}s`;
         }
         
         const now = Date.now();
