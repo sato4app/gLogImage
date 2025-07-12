@@ -101,9 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
         isCapturing = true;
         savedImages = [];
         lastSaveTime = 0;
-        captureStartTime = Date.now(); // 経過時間計測用
+        // スコア計算の前提となるセンサー状態をセッション開始時にリセット
+        lastRawAccel = { x: 0, y: 0, z: 0 };
+        isFirstMotionEvent = true;
+
         resetDisplayAndValues();
-        
         stopButton.disabled = false;
         startButton.disabled = true;
         
@@ -144,12 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // 状態変数のリセット
         scoreMin = 1.0;
         scoreMax = 0.0;
-
-        // センサー関連の変数をリセット
-        currentRawAccel = { x: 0, y: 0, z: 0 };
-        lastRawAccel = { x: 0, y: 0, z: 0 };
-        currentRotationRate = { alpha: 0, beta: 0, gamma: 0 };
-        isFirstMotionEvent = true; // 開始時にリセット
+        captureStartTime = Date.now(); // 経過時間計測の開始点をリセット
 
         // 画面表示をリセット
         if (accelX) accelX.textContent = formatNumber(0, 2, 6);
@@ -195,6 +192,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (stabilityScore > STABILITY_THRESHOLD) {
                 saveBestShot();
                 triggerFlash();
+                // 撮影したので、次の撮影のためにスコアと経過時間をリセット
+                resetDisplayAndValues();
+
                 lastSaveTime = now;
                 statusDisplay.textContent = `画像を保存しました！ (${savedImages.length} / ${TARGET_IMAGE_COUNT})`;
                 if (savedImages.length >= TARGET_IMAGE_COUNT) {
