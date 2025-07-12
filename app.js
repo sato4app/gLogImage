@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- アプリケーション設定値 ---
     const TARGET_IMAGE_COUNT = 500;
     const COOLDOWN_PERIOD_MS = 5000;
-    let STABILITY_THRESHOLD = 0.95; 
+    let STABILITY_THRESHOLD = 0.85; 
 
     // --- アプリケーションの状態を管理する変数 ---
     let savedImages = [];
