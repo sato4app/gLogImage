@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('modal');
     const modalImage = document.getElementById('modalImage');
     const closeButton = document.querySelector('.close-button');
+    let modalCounter; // モーダル内の画像カウンター
     let elapsedTimeDisplay; // 経過時間表示用の要素を保持する変数
 
     // 経過時間表示用のDOM要素を動的に作成し、スコア表示の下に挿入
@@ -31,6 +32,20 @@ document.addEventListener('DOMContentLoaded', () => {
         p.innerHTML = `経過時間: <span id="elapsed-time-display">---</span>`;
         scoreMinMaxDisplay.parentElement.insertAdjacentElement('afterend', p);
         elapsedTimeDisplay = document.getElementById('elapsed-time-display');
+    }
+
+    // モーダル内にカウンター要素を動的に作成
+    if (modal) {
+        const counterElement = document.createElement('div');
+        counterElement.style.position = 'absolute';
+        counterElement.style.top = '15px';
+        counterElement.style.left = '15px';
+        counterElement.style.color = 'white';
+        counterElement.style.fontSize = '18px';
+        counterElement.style.fontWeight = 'bold';
+        counterElement.style.textShadow = '1px 1px 3px rgba(0,0,0,0.7)';
+        modal.appendChild(counterElement);
+        modalCounter = counterElement;
     }
 
     // --- アプリケーション設定値 ---
@@ -410,6 +425,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         currentImageIndex = index;
         modalImage.src = savedImages[currentImageIndex];
+        if (modalCounter) {
+            modalCounter.textContent = `${currentImageIndex + 1} / ${savedImages.length}`;
+        }
         modal.style.display = "block";
     }
 
