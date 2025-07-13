@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isCapturing = false;
     let animationFrameId;
     let videoStream;
+    let currentImageIndex = -1; // モーダルで表示中の画像のインデックス
 
     // --- スコアとセンサー関連の変数 ---
     let scoreMin = 1.0;
@@ -69,6 +70,25 @@ document.addEventListener('DOMContentLoaded', () => {
         STABILITY_THRESHOLD = parseFloat(e.target.value);
         thresholdValue.textContent = STABILITY_THRESHOLD.toFixed(2);
     });
+
+    // --- モーダル画像のスワイプ処理 ---
+    let touchStartX = 0;
+    modal.addEventListener('touchstart', e => {
+        // スワイプ操作はモーダル内の画像上でのみ開始できるようにする
+        if (e.target === modalImage) {
+            touchStartX = e.changedTouches[0].screenX;
+        }
+    }, { passive: true });
+
+    modal.addEventListener('touchend', e => {
+        // スワイプ操作が画像上で開始されていた場合のみ処理
+        if (e.target === modalImage && touchStartX !== 0) {
+            const touchEndX = e.changedTouches[0].screenX;
+            handleSwipe(touchStartX, touchEndX);
+            touchStartX = 0; // 開始点をリセット
+        }
+    });
+
 
     // =================================================================
     //  メインの処理フロー
@@ -364,18 +384,46 @@ document.addEventListener('DOMContentLoaded', () => {
     //  ギャラリーとダウンロード関連
     // =================================================================
 
+    // スワイプ操作に応じて前後の画像を表示する
+    function handleSwipe(startX, endX) {
+        const swipeThreshold = 50; // 50px以上の移動でスワイプと判定
+        const diff = startX - endX;
+
+        if (Math.abs(diff) < swipeThreshold) {
+            return; // 移動量が閾値未満なら何もしない
+        }
+
+        if (diff > 0) {
+            // 右スワイプ（指を左に動かす）-> 次の画像
+            showImageInModal(currentImageIndex + 1);
+        } else {
+            // 左スワイプ（指を右に動かす）-> 前の画像
+            showImageInModal(currentImageIndex - 1);
+        }
+    }
+
+    // 指定されたインデックスの画像をモーダルに表示する
+    function showImageInModal(index) {
+        // インデックスが画像の範囲外なら何もしない
+        if (index < 0 || index >= savedImages.length) {
+            return;
+        }
+        currentImageIndex = index;
+        modalImage.src = savedImages[currentImageIndex];
+        modal.style.display = "block";
+    }
+
     // 撮影した画像一覧（ギャラリー）を表示する。
     function displayGallery() {
         captureContainer.style.display = 'none';
         galleryContainer.style.display = 'block';
         gallery.innerHTML = '';
 
-        savedImages.forEach(src => {
+        savedImages.forEach((src, index) => {
             const img = document.createElement('img');
             img.src = src;
             img.addEventListener('click', () => {
-                modalImage.src = src;
-                modal.style.display = "block";
+                showImageInModal(index);
             });
             gallery.appendChild(img);
         });
