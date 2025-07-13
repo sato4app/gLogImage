@@ -127,6 +127,7 @@ button:disabled {
     font-size: 40px;
     font-weight: bold;
     transition: 0.3s;
+    z-index: 1001; /* 画像より手前に表示 */
     cursor: pointer;
 }
 

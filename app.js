@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         counterElement.style.fontSize = '18px';
         counterElement.style.fontWeight = 'bold';
         counterElement.style.textShadow = '1px 1px 3px rgba(0,0,0,0.7)';
+        counterElement.style.zIndex = '1001'; // 重なり順を最前面に
         modal.appendChild(counterElement);
         modalCounter = counterElement;
     }
