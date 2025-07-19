@@ -14,8 +14,10 @@ h1 {
     margin-bottom: 20px;
 }
 
-/* 撮影エリア */
-#capture-container, #gallery-container {
+/* カメラ、撮影、ギャラリーエリアのコンテナ */
+#camera-container,
+#capture-container,
+#gallery-container {
     width: 100%;
     max-width: 640px;
 }

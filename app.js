@@ -175,7 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // 画像表示チェックボックスがオンの場合のみギャラリーを表示
         if (savedImages.length > 0 && showImagesCheckbox.checked) {
-
             displayGallery();
         }
     }
