@@ -146,6 +146,11 @@ document.addEventListener('DOMContentLoaded', () => {
         resetDisplayAndValues();
         stopButton.disabled = false;
         startButton.disabled = true;
+
+        // ギャラリーをクリアして表示状態にする
+        gallery.innerHTML = '';
+        galleryContainer.style.display = 'block';
+        captureContainer.style.display = 'block'; // コントロールボタン等のために表示
         
         statusDisplay.textContent = `撮影を開始しました (0 / ${TARGET_IMAGE_COUNT})`;
         captureLoop();
@@ -170,10 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
             elapsedTimeDisplay.textContent = '---';
         }
         
-        // 撮影した画像があればギャラリーを表示
-        if (savedImages.length > 0) {
-            displayGallery();
-        }
+        // リアルタイムでギャラリーに追加するため、ここでの表示処理は不要
+        // 撮影終了後もギャラリーは表示されたままにする
     }
 
     // =================================================================
@@ -286,7 +289,10 @@ document.addEventListener('DOMContentLoaded', () => {
         canvas.height = video.videoHeight;
         const context = canvas.getContext('2d');
         context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        savedImages.push(canvas.toDataURL('image/jpeg'));
+        const imageDataUrl = canvas.toDataURL('image/jpeg');
+        savedImages.push(imageDataUrl);
+        // 撮影した画像をリアルタイムでギャラリーに追加
+        addImageToGallery(imageDataUrl, savedImages.length - 1);
     }
 
     // 撮影成功時に画面全体を白く光らせる視覚効果を発動する。
@@ -435,20 +441,16 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = "block";
     }
 
-    // 撮影した画像一覧（ギャラリー）を表示する。
-    function displayGallery() {
-        captureContainer.style.display = 'none';
-        galleryContainer.style.display = 'block';
-        gallery.innerHTML = '';
-
-        savedImages.forEach((src, index) => {
-            const img = document.createElement('img');
-            img.src = src;
-            img.addEventListener('click', () => {
-                showImageInModal(index);
-            });
-            gallery.appendChild(img);
+    // 指定された画像をギャラリーにサムネイルとして追加する
+    function addImageToGallery(src, index) {
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = `Captured image ${index + 1}`;
+        img.addEventListener('click', () => {
+            showImageInModal(index);
         });
+        // 新しい画像が先頭に来るように挿入する
+        gallery.insertBefore(img, gallery.firstChild);
     }
 
     // ギャラリーの全画像をZIPファイルにまとめてダウンロードする。

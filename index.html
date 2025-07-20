@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auto Capture BestShot</title>
+    <title>Auto Capture Shot</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="manifest" href="manifest.json">
     <!-- JSZipライブラリをCDNから読み込み -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
-    <h1>Auto Capture Best-Shot</h1>
+    <h1>Auto Capture Shot</h1>
 
     <!-- 撮影中の画面 -->
     <div id="capture-container">
-        <video id="cameraFeed" autoplay playsinline muted></video>
+        <video id="cameraFeed" autoplay playsinline muted style="display: none;"></video>
         <div class="controls">
             <button id="startButton">開始</button>
             <button id="stopButton" disabled>終了</button>
