@@ -465,13 +465,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         zip.generateAsync({ type: "blob" })
             .then(content => {
+                const url = URL.createObjectURL(content);
                 const link = document.createElement('a');
-                link.href = URL.createObjectURL(content);
+                link.href = url;
                 link.download = "best_shots.zip";
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
                 statusDisplay.textContent = 'ZIPファイルのダウンロードを開始しました。';
+                // ダウンロード処理が開始されるのを待ってからURLを解放する
+                setTimeout(() => URL.revokeObjectURL(url), 100);
             });
     }
 });
