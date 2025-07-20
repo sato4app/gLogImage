@@ -52,7 +52,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- アプリケーション設定値 ---
     const TARGET_IMAGE_COUNT = 500;
     const COOLDOWN_PERIOD_MS = 5000;
-    let STABILITY_THRESHOLD = 0.85; 
+    // 安定度の閾値はHTMLのスライダーの初期値から取得する
+    let STABILITY_THRESHOLD = parseFloat(thresholdSlider.value);
 
     // --- アプリケーションの状態を管理する変数 ---
     let savedImages = [];
