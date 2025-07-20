@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- DOM要素の取得 ---
     const video = document.getElementById('cameraFeed');
-    const showImagesCheckbox = document.getElementById('showImagesCheckbox'); // 追加
     const startButton = document.getElementById('startButton');
     const stopButton = document.getElementById('stopButton');
     const statusDisplay = document.getElementById('status');
@@ -140,9 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lastSaveTime = 0;
         // スコア計算の前提となるセンサー状態をセッション開始時にリセット
 
-        // 画像表示チェックボックスの状態をstartButton押下時に取得
-        const shouldDisplayImages = showImagesCheckbox.checked;
-
         lastRawAccel = { x: 0, y: 0, z: 0 };
         isFirstMotionEvent = true;
 
@@ -150,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stopButton.disabled = false;
         startButton.disabled = true;
         
-        statusDisplay.textContent = `撮影を開始しました (0 / ${TARGET_IMAGE_COUNT}) ${shouldDisplayImages ? "" : "(画像非表示)"}`;
+        statusDisplay.textContent = `撮影を開始しました (0 / ${TARGET_IMAGE_COUNT})`;
         captureLoop();
     }
 
@@ -173,8 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
             elapsedTimeDisplay.textContent = '---';
         }
         
-        // 画像表示チェックボックスがオンの場合のみギャラリーを表示
-        if (savedImages.length > 0 && showImagesCheckbox.checked) {
+        // 撮影した画像があればギャラリーを表示
+        if (savedImages.length > 0) {
             displayGallery();
         }
     }
